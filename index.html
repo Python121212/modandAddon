@@ -3,59 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MC Java-to-Bedrock Converter | 世界初 オートコンバーター</title>
+    <title>MC Java-to-Bedrock Converter | WORLD FIRST</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
     
     <style>
-        /* --- CSS Reset & Variables (変数定義) --- */
         :root {
-            --bg-color: #0d1117;       /* 深い闇（ベース） */
-            --panel-bg: #161b22;     /* 少し明るい闇（パネル） */
-            --primary-color: #00f2fe; /* サイバーブルー（メインアクセント） */
-            --secondary-color: #4facfe; /* 少し濃いブルー */
-            --text-color: #c9d1d9;    /* 薄いグレー（テキスト） */
-            --text-bright: #ffffff;   /* 白（強調テキスト） */
-            --border-color: #30363d;   /* パネルの枠線 */
-            --success-color: #00e676;  /* 黄緑（成功・完了） */
-            --error-color: #ff1744;    /* 赤（エラー） */
-            
-            /* マイクラ風のフォント設定（Noto Sansをベースにカッチリさせる） */
+            --bg-color: #0d1117;
+            --panel-bg: #161b22;
+            --primary-color: #00f2fe;
+            --secondary-color: #4facfe;
+            --text-color: #c9d1d9;
+            --text-bright: #ffffff;
+            --border-color: #30363d;
+            --success-color: #00e676;
+            --error-color: #ff1744;
             --font-main: 'Noto Sans JP', sans-serif;
-            --font-code: 'Fira Code', monospace; /* コード用 */
+            --font-code: 'Fira Code', monospace;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            outline: none;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
             font-family: var(--font-main);
             background-color: var(--bg-color);
             color: var(--text-color);
-            line-height: 1.6;
-            overflow-x: hidden; /* 横スクロール防止 */
+            overflow-x: hidden;
             -webkit-font-smoothing: antialiased;
         }
 
-        /* --- Layout --- */
         .app-container {
             display: flex;
             flex-direction: column;
             min-height: 100vh;
             padding: 20px;
-        }
-
-        /* PCでのレイアウト調整 */
-        @media (min-width: 1024px) {
-            .app-container {
-                padding: 40px;
-                max-width: 1400px;
-                margin: 0 auto;
-            }
+            max-width: 1400px;
+            margin: 0 auto;
         }
 
         /* --- Header --- */
@@ -68,18 +51,8 @@
             margin-bottom: 30px;
         }
 
-        header h1 {
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: var(--text-bright);
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
-
-        header h1 span {
-            color: var(--primary-color);
-            text-shadow: 0 0 10px var(--primary-color);
-        }
+        header h1 { font-size: 1.2rem; color: var(--text-bright); text-transform: uppercase; }
+        header h1 span { color: var(--primary-color); text-shadow: 0 0 10px var(--primary-color); }
 
         .version-tag {
             font-family: var(--font-code);
@@ -90,91 +63,58 @@
             border: 1px solid var(--border-color);
         }
 
-        /* --- Main Content --- */
+        /* --- Offline Overlay --- */
+        #offline-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(13, 17, 23, 0.95);
+            z-index: 9999; display: none; justify-content: center; align-items: center;
+            text-align: center; backdrop-filter: blur(10px);
+        }
+        .offline-content h2 { color: var(--error-color); margin-bottom: 20px; text-shadow: 0 0 10px var(--error-color); }
+        .offline-content button {
+            background: var(--primary-color); border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold;
+        }
+
+        /* --- Layout Grid --- */
         main {
             display: grid;
             gap: 20px;
-            grid-template-columns: 1fr; /* モバイルは1列 */
+            grid-template-columns: 1fr;
         }
 
-        /* PCでは左右2列に */
         @media (min-width: 1024px) {
-            main {
-                grid-template-columns: 1fr 1fr; /* 1:1の比率 */
-                align-items: start;
-            }
+            main { grid-template-columns: 1fr 1fr; align-items: start; }
         }
 
-        /* --- Drop Zone (ファイルアップロードエリア) --- */
-        .drop-zone-wrapper {
-            grid-column: 1 / -1; /* PCでも横いっぱい */
-            margin-bottom: 20px;
-        }
-
+        /* --- Drop Zone --- */
+        .drop-zone-wrapper { grid-column: 1 / -1; margin-bottom: 10px; }
         .drop-zone {
-            position: relative;
             background-color: var(--panel-bg);
             border: 2px dashed var(--border-color);
             border-radius: 8px;
-            height: 200px;
+            height: 180px;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             cursor: pointer;
             transition: all 0.3s ease;
-            overflow: hidden;
         }
-
-        /* ホバー時とファイルドラッグ時のエフェクト */
         .drop-zone:hover, .drop-zone.drag-over {
             border-color: var(--primary-color);
             background-color: rgba(0, 242, 254, 0.05);
-            box-shadow: 0 0 20px rgba(0, 242, 254, 0.1);
         }
+        .drop-zone-text { font-weight: 700; color: var(--text-bright); margin-bottom: 5px; }
+        .drop-zone-subtext { font-size: 0.8rem; opacity: 0.6; }
 
-        /* マイクラのブロックをイメージした装飾（偽物） */
-        .drop-zone::before {
-            content: '';
-            position: absolute;
-            width: 50px;
-            height: 50px;
-            background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAMklEQVRYR+3OQRUAIAzAsM5/6Xor4MAnmUDS99p55+9XwAMHPDxwAMIDBzw8cADCAwfgAF45mR74u68+AAAAAElFTkSuQmCC'); /* 草ブロックのドット絵（ダミー） */
-            background-size: contain;
-            opacity: 0.1;
-            transition: opacity 0.3s ease;
-        }
-        
-        .drop-zone:hover::before, .drop-zone.drag-over::before {
-            opacity: 0.4;
-        }
-
-        .drop-zone-text {
-            font-weight: 700;
-            color: var(--text-bright);
-            margin-bottom: 10px;
-            z-index: 1; /* 装飾より上に */
-            text-align: center;
-            padding: 0 20px;
-        }
-
-        .drop-zone-subtext {
-            font-size: 0.8rem;
-            color: var(--text-color);
-            z-index: 1;
-        }
-
-        /* ファイル入力（隠す） */
-        #file-input {
-            display: none;
-        }
-
-        /* --- Console & Config Panels --- */
+        /* --- Panels --- */
         .panel {
             background-color: var(--panel-bg);
             border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 20px;
+            display: flex;
+            flex-direction: column;
         }
 
         .panel-header {
@@ -182,266 +122,145 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 15px;
-            padding-bottom: 10px;
             border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
         }
 
-        .panel-title {
-            font-weight: 700;
-            color: var(--text-bright);
-            font-size: 0.9rem;
-            text-transform: uppercase;
-        }
+        .panel-title { font-weight: 700; font-size: 0.9rem; text-transform: uppercase; color: var(--text-bright); }
 
-        /* --- コンソール（ログ表示） --- */
-        #console-log {
-            font-family: var(--font-code);
-            font-size: 0.8rem;
-            height: 300px;
-            overflow-y: auto;
-            background-color: rgba(0,0,0,0.2);
-            padding: 10px;
+        /* --- Terminal --- */
+        #terminal-container {
+            background-color: rgba(0,0,0,0.4);
             border-radius: 4px;
+            padding: 15px;
+            height: 350px;
             display: flex;
-            flex-direction: column-reverse; /* 新しいログを下に */
+            flex-direction: column;
         }
 
-        .log-entry {
-            margin-bottom: 4px;
-            word-break: break-all;
+        #console-log {
+            flex: 1;
+            overflow-y: auto;
+            font-family: var(--font-code);
+            font-size: 0.85rem;
+            margin-bottom: 10px;
         }
 
+        .log-entry { margin-bottom: 5px; line-height: 1.4; }
         .log-entry.info { color: var(--text-color); }
         .log-entry.success { color: var(--success-color); }
-        .log-entry.error { color: var(--error-color); font-weight: 600; }
-        .log-entry.prefix { color: var(--secondary-color); margin-right: 5px; }
+        .log-entry.error { color: var(--error-color); }
+        .log-entry .prefix { color: var(--secondary-color); margin-right: 8px; font-weight: bold; }
 
-        /* --- コンフィグ（設定・ステータス） --- */
-        .config-item {
-            margin-bottom: 15px;
+        .terminal-input-line {
+            display: flex;
+            align-items: center;
+            border-top: 1px solid var(--border-color);
+            padding-top: 10px;
         }
 
-        .config-label {
-            display: block;
-            font-size: 0.8rem;
-            color: var(--text-color);
-            margin-bottom: 5px;
-        }
-
-        .config-value {
-            font-family: var(--font-code);
-            color: var(--text-bright);
-            font-weight: 600;
-        }
-
-        /* 進捗バー */
-        .progress-container {
-            width: 100%;
-            height: 10px;
-            background-color: rgba(255,255,255,0.05);
-            border-radius: 5px;
-            overflow: hidden;
-            margin-top: 5px;
-        }
-
-        #progress-bar {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, var(--secondary-color), var(--primary-color));
-            box-shadow: 0 0 10px var(--primary-color);
-            transition: width 0.2s ease;
-        }
-
-        /* 変換ボタン（かっこよく） */
-        .btn-convert {
-            width: 100%;
-            padding: 15px;
-            background: linear-gradient(135deg, var(--secondary-color) 0%, var(--primary-color) 100%);
+        #terminal-input {
+            background: transparent;
             border: none;
-            border-radius: 4px;
-            color: var(--bg-color); /* ダーク背景に映える色 */
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 20px;
-            font-family: var(--font-main);
+            color: var(--primary-color);
+            font-family: var(--font-code);
+            flex: 1;
+            margin-left: 10px;
         }
 
-        .btn-convert:hover {
-            box-shadow: 0 0 20px rgba(0, 242, 254, 0.5);
-            transform: translateY(-2px);
+        /* --- Status & Progress --- */
+        .config-item { margin-bottom: 15px; }
+        .config-label { font-size: 0.75rem; color: var(--text-color); margin-bottom: 4px; text-transform: uppercase; }
+        .config-value { font-family: var(--font-code); color: var(--text-bright); font-weight: 600; }
+
+        .progress-container {
+            width: 100%; height: 8px; background: rgba(255,255,255,0.05);
+            border-radius: 4px; overflow: hidden; margin-top: 8px;
+        }
+        #progress-bar {
+            width: 0%; height: 100%; background: linear-gradient(90deg, var(--secondary-color), var(--primary-color));
+            box-shadow: 0 0 10px var(--primary-color); transition: width 0.3s ease;
         }
 
-        .btn-convert:disabled {
-            background: var(--border-color);
-            color: var(--text-color);
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
+        .btn-convert {
+            width: 100%; padding: 15px;
+            background: linear-gradient(135deg, var(--secondary-color) 0%, var(--primary-color) 100%);
+            border: none; border-radius: 4px; color: var(--bg-color);
+            font-weight: 800; text-transform: uppercase; cursor: pointer;
+            transition: all 0.3s ease; margin-top: 10px;
         }
+        .btn-convert:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 0 20px rgba(0, 242, 254, 0.4); }
+        .btn-convert:disabled { background: var(--border-color); color: #555; cursor: not-allowed; }
 
-        /* --- Mobile 固有の調整 --- */
-        @media (max-width: 767px) {
-            header h1 { font-size: 1rem; }
-            .drop-zone { height: 150px; }
-            #console-log { height: 200px; }
-        }
+        .status-light { font-size: 0.7rem; font-weight: bold; padding: 2px 6px; border-radius: 3px; }
+        .online { border: 1px solid var(--success-color); color: var(--success-color); }
+        .offline { border: 1px solid var(--error-color); color: var(--error-color); }
     </style>
 </head>
 <body>
 
+<div id="offline-overlay">
+    <div class="offline-content">
+        <h2>⚠️ SYSTEM OFFLINE</h2>
+        <p>JavaScript Module Error or Connection Lost.</p><br>
+        <button onclick="window.location.reload()">RETRY REBOOT</button>
+    </div>
+</div>
+
 <div class="app-container">
     <header>
-        <h1><span>MC</span> Java-to-Bedrock Converter</h1>
-        <div class="version-tag">WORLD FIRST v0.1.0</div>
+        <h1><span>MC</span> Java-to-Bedrock</h1>
+        <div class="version-tag">WORLD FIRST CORE v0.1.0</div>
     </header>
 
     <main>
         <div class="drop-zone-wrapper">
             <div id="drop-zone" class="drop-zone">
-                <div class="drop-zone-text">Drop Java MOD (.jar) here</div>
-                <div class="drop-zone-subtext">or click to browse</div>
-                <input type="file" id="file-input" accept=".jar">
+                <p class="drop-zone-text">INITIALIZE: DROP .JAR MOD HERE</p>
+                <p class="drop-zone-subtext">OR CLICK TO BROWSE FILES</p>
+                <input type="file" id="file-input" accept=".jar" style="display:none">
             </div>
         </div>
 
-        <section class="panel console-panel">
+        <section class="panel">
             <div class="panel-header">
-                <h2 class="panel-title">Conversion Log</h2>
-                <div class="version-tag">SYSTEM_READY</div>
+                <h2 class="panel-title">System Terminal</h2>
+                <div id="status-light" class="status-light online">READY</div>
             </div>
-            <div id="console-log">
-                <div class="log-entry info"><span class="prefix">&gt;</span>Welcome to the world's first auto-converter.</div>
+            <div id="terminal-container">
+                <div id="console-log">
+                    <div class="log-entry success"><span class="prefix">system:</span>Kernel initialized. Waiting for input...</div>
+                </div>
+                <div class="terminal-input-line">
+                    <span class="prefix">admin@mc-conv:~$</span>
+                    <input type="text" id="terminal-input" placeholder="type 'help'..." autocomplete="off">
+                </div>
             </div>
         </section>
 
-        <section class="panel config-panel">
+        <section class="panel">
             <div class="panel-header">
-                <h2 class="panel-title">Status & Control</h2>
+                <h2 class="panel-title">Conversion Control</h2>
             </div>
-
             <div class="config-item">
-                <div class="config-label">Selected File</div>
-                <div id="selected-file-name" class="config-value">None</div>
+                <div class="config-label">Target File</div>
+                <div id="ui-filename" class="config-value">None</div>
             </div>
-
             <div class="config-item">
-                <div class="config-label">Detected Namespace</div>
-                <div id="detected-namespace" class="config-value">---</div>
+                <div class="config-label">Namespace</div>
+                <div id="ui-namespace" class="config-value">---</div>
             </div>
-
             <div class="config-item">
-                <div class="config-label">Overall Progress</div>
-                <div id="progress-text" class="config-value">0%</div>
+                <div class="config-label">Process Progress</div>
+                <div id="ui-progress-text" class="config-value">0%</div>
                 <div class="progress-container">
                     <div id="progress-bar"></div>
                 </div>
             </div>
-
-            <button id="convert-btn" class="btn-convert" disabled>Start Conversion</button>
+            <button id="convert-btn" class="btn-convert" disabled>Execute Conversion</button>
         </section>
     </main>
 </div>
-
-<script>
-    // UI要素の取得
-    const dropZone = document.getElementById('drop-zone');
-    const fileInput = document.getElementById('file-input');
-    const convertBtn = document.getElementById('convert-btn');
-    const fileNameDisplay = document.getElementById('selected-file-name');
-    const consoleLog = document.getElementById('console-log');
-    const progressBar = document.getElementById('progress-bar');
-    const progressText = document.getElementById('progress-text');
-
-    // --- ドロップゾーンのイベント処理 ---
-
-    // クリックでファイル選択を開く
-    dropZone.addEventListener('click', () => fileInput.click());
-
-    // ファイルが選択された時
-    fileInput.addEventListener('change', (e) => handleFileSelect(e.target.files[0]));
-
-    // ドラッグオーバー時のエフェクト
-    dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.classList.add('drag-over');
-    });
-
-    // ドラッグが離れた時・ドロップされた時
-    ['dragleave', 'drop'].forEach(event => {
-        dropZone.addEventListener(event, () => dropZone.classList.remove('drag-over'));
-    });
-
-    // ファイルがドロップされた時
-    dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        handleFileSelect(e.dataTransfer.files[0]);
-    });
-
-    // --- ファイル選択後の処理（main.jsへの橋渡し） ---
-    let targetFile = null;
-
-    function handleFileSelect(file) {
-        if (!file || !file.name.endsWith('.jar')) {
-            addLog('Invalid file type. Please select a .jar file.', 'error');
-            convertBtn.disabled = true;
-            return;
-        }
-
-        targetFile = file;
-        fileNameDisplay.textContent = file.name;
-        convertBtn.disabled = false; // 変換ボタンを有効化
-        
-        // ログに出力（かっこよく）
-        addLog(`File loaded: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`, 'success');
-        
-        // 進捗をリセット
-        updateProgress(0);
-    }
-
-    // --- コンソールログへの追加関数 ---
-    function addLog(message, type = 'info') {
-        const entry = document.createElement('div');
-        entry.className = `log-entry ${type}`;
-        
-        const prefix = document.createElement('span');
-        prefix.className = 'prefix';
-        prefix.textContent = '>';
-        
-        entry.appendChild(prefix);
-        entry.appendChild(document.createTextNode(message));
-        
-        consoleLog.prepend(entry); // 新しいものを上に追加（reverse表示のため）
-    }
-
-    // --- 進捗バーの更新関数 ---
-    function updateProgress(percent) {
-        progressBar.style.width = `${percent}%`;
-        progressText.textContent = `${percent}%`;
-    }
-
-    // --- 変換ボタンのクリックイベント（本番ではmain.jsの convertJar() を呼ぶ） ---
-    convertBtn.addEventListener('click', () => {
-        convertBtn.disabled = true; // 連打防止
-        addLog('Starting conversion...', 'info');
-        
-        // --- ダミーの進捗アニメーション（本気感を出すため） ---
-        let p = 0;
-        const interval = setInterval(() => {
-            p += Math.floor(Math.random() * 10);
-            if (p >= 100) {
-                p = 100;
-                clearInterval(interval);
-                addLog('Conversion temporary halted. Waiting for main.js implementation.', 'error');
-                convertBtn.disabled = false;
-            }
-            updateProgress(p);
-        }, 300);
-    });
-
-</script>
 
 </body>
 </html>
