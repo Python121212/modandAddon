@@ -1,127 +1,198 @@
 /**
- * main.js - 全体の司令塔
- * 役割: UIイベントの監視、各変換モジュールの実行順序制御、進捗管理
+ * main.js - System Kernel
+ * 役割: UI制御、ターミナルコマンド実行、各コンバーターモジュールのオーケストレーション
  */
-
-// 各モジュールのインポート（これらは順次作成していきます）
-// import { ModScanner } from './core/Search.js';
-// import { FileHandler } from './core/file.js';
-// import { ErrorCommander } from './monitor/Error.js';
-// import { ManifestGenerator } from './core/Manifest.js';
 
 class AppController {
     constructor() {
-        // 状態管理
+        // 1. 内部状態の初期化
         this.selectedFile = null;
         this.isConverting = false;
+        this.namespace = "---";
+
+        // 2. UI要素のキャプチャ
+        this.elements = {
+            dropZone: document.getElementById('drop-zone'),
+            fileInput: document.getElementById('file-input'),
+            convertBtn: document.getElementById('convert-btn'),
+            consoleLog: document.getElementById('console-log'),
+            terminalInput: document.getElementById('terminal-input'),
+            progressBar: document.getElementById('progress-bar'),
+            progressText: document.getElementById('ui-progress-text'),
+            filenameDisplay: document.getElementById('ui-filename'),
+            namespaceDisplay: document.getElementById('ui-namespace'),
+            statusLight: document.getElementById('status-light'),
+            offlineOverlay: document.getElementById('offline-overlay')
+        };
+
+        this.init();
+    }
+
+    init() {
+        this.setupEventListeners();
+        this.setupEnvironmentCheck();
+        this.addLog("Kernel initialized. System status: OPTIMAL", "success");
+    }
+
+    // --- 環境監視 (Offline/Online) ---
+    setupEnvironmentCheck() {
+        const updateStatus = () => {
+            if (navigator.onLine) {
+                this.elements.offlineOverlay.style.display = 'none';
+                this.elements.statusLight.textContent = "READY";
+                this.elements.statusLight.className = "status-light online";
+            } else {
+                this.elements.offlineOverlay.style.display = 'flex';
+                this.elements.statusLight.textContent = "OFFLINE";
+                this.elements.statusLight.className = "status-light offline";
+                this.addLog("Network link severed. Emergency mode active.", "error");
+            }
+        };
+
+        window.addEventListener('online', updateStatus);
+        window.addEventListener('offline', updateStatus);
+        if (!navigator.onLine) updateStatus();
+    }
+
+    // --- イベントリスナー設定 ---
+    setupEventListeners() {
+        // ファイル選択関連
+        this.elements.dropZone.addEventListener('click', () => this.elements.fileInput.click());
+        this.elements.fileInput.addEventListener('change', (e) => this.handleFile(e.target.files[0]));
         
-        // UI要素のバインド
-        this.initUIElements();
-        this.attachEventListeners();
-        
-        this.addLog("System initialized. Ready for conversion.", "success");
+        this.elements.dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            this.elements.dropZone.classList.add('drag-over');
+        });
+        this.elements.dropZone.addEventListener('dragleave', () => this.elements.dropZone.classList.remove('drag-over'));
+        this.elements.dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            this.elements.dropZone.classList.remove('drag-over');
+            this.handleFile(e.dataTransfer.files[0]);
+        });
+
+        // ターミナル入力
+        this.elements.terminalInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const cmd = this.elements.terminalInput.value.trim();
+                if (cmd) this.executeCommand(cmd);
+                this.elements.terminalInput.value = '';
+            }
+        });
+
+        // 実行ボタン
+        this.elements.convertBtn.addEventListener('click', () => this.executeConversion());
     }
 
-    initUIElements() {
-        this.convertBtn = document.getElementById('convert-btn');
-        this.consoleLog = document.getElementById('console-log');
-        this.progressBar = document.getElementById('progress-bar');
-        this.progressText = document.getElementById('progress-text');
-        this.namespaceDisplay = document.getElementById('detected-namespace');
+    // --- ファイルハンドリング ---
+    handleFile(file) {
+        if (!file || !file.name.endsWith('.jar')) {
+            this.addLog("Invalid file type. Only .jar (Java MOD) is accepted.", "error");
+            return;
+        }
+        this.selectedFile = file;
+        this.elements.filenameDisplay.textContent = file.name;
+        this.elements.convertBtn.disabled = false;
+        this.addLog(`Source loaded: ${file.name}`, "success");
+        this.addLog("Type 'convert' or click Execute to start.");
     }
 
-    attachEventListeners() {
-        // 変換開始ボタン
-        this.convertBtn.addEventListener('click', () => this.startConversion());
+    // --- ターミナルコマンド実行 ---
+    executeCommand(input) {
+        const cmd = input.toLowerCase();
+        this.addLog(`admin@mc-conv:~$ ${input}`, "info");
+
+        switch(cmd) {
+            case 'help':
+                this.addLog("Commands: help, status, clear, convert, version, reboot");
+                break;
+            case 'status':
+                const netStatus = navigator.onLine ? "Online" : "Offline";
+                this.addLog(`[SYSTEM] Net: ${netStatus} | File: ${this.selectedFile ? "Ready" : "None"}`);
+                break;
+            case 'clear':
+                this.elements.consoleLog.innerHTML = '';
+                break;
+            case 'convert':
+                this.executeConversion();
+                break;
+            case 'version':
+                this.addLog("Engine: Java-to-Bedrock Alpha v0.1.0");
+                break;
+            case 'reboot':
+                window.location.reload();
+                break;
+            default:
+                this.addLog(`Unknown command: ${cmd}`, "error");
+        }
     }
 
-    /**
-     * ログ出力の統合管理
-     * @param {string} message - メッセージ内容
-     * @param {string} type - 'info', 'success', 'error'
-     */
+    // --- ログ出力 ---
     addLog(message, type = 'info') {
         const entry = document.createElement('div');
         entry.className = `log-entry ${type}`;
-        
-        const prefix = document.createElement('span');
-        prefix.className = 'prefix';
-        prefix.textContent = '>';
-        
-        entry.appendChild(prefix);
-        entry.appendChild(document.createTextNode(message));
-        
-        this.consoleLog.prepend(entry);
-        console.log(`[${type.toUpperCase()}] ${message}`);
+        entry.innerHTML = `<span class="prefix">system:</span>${message}`;
+        this.elements.consoleLog.appendChild(entry);
+        this.elements.consoleLog.scrollTop = this.elements.consoleLog.scrollHeight;
     }
 
-    /**
-     * 進捗バーの更新
-     * @param {number} percent - 0 to 100
-     */
+    // --- 進捗更新 ---
     updateProgress(percent) {
-        const p = Math.min(100, Math.max(0, percent));
-        this.progressBar.style.width = `${p}%`;
-        this.progressText.textContent = `${Math.floor(p)}%`;
+        this.elements.progressBar.style.width = `${percent}%`;
+        this.elements.progressText.textContent = `${Math.floor(percent)}%`;
     }
 
-    /**
-     * メイン変換シーケンス
-     * このメソッドが「世界初」の変換プロセスを順番に実行する
-     */
-    async startConversion() {
-        if (this.isConverting || !targetFile) return;
+    // --- メイン変換プロセス (各モジュールとの連携ポイント) ---
+    async executeConversion() {
+        if (this.isConverting || !this.selectedFile) return;
 
         this.isConverting = true;
-        this.convertBtn.disabled = true;
-        this.addLog("Initiating conversion sequence...", "info");
+        this.elements.convertBtn.disabled = true;
+        this.updateProgress(0);
+        
+        this.addLog(">>> EXECUTION SEQUENCE STARTED", "info");
 
         try {
-            // 1. ファイルの読み込み (file.js 担当予定)
-            this.updateProgress(10);
-            this.addLog("Unzipping .jar file...");
-            // const jarData = await FileHandler.unzip(targetFile);
+            // STEP 1: ファイル解凍 (file.js)
+            this.addLog("Unzipping Java archive...");
+            await this.simulateWork(15); // 実装待ちのダミー
 
-            // 2. ファイルスキャン & 仕分け (Search.js 担当予定)
-            this.updateProgress(30);
-            this.addLog("Scanning assets and identifying namespace...");
-            // const scanner = new ModScanner();
-            // const assets = await scanner.scanJar(targetFile);
-            // this.namespaceDisplay.textContent = scanner.namespace;
+            // STEP 2: 解析 (Search.js)
+            this.addLog("Scanning for block and item definitions...");
+            await this.simulateWork(40);
+            this.namespace = "converted_mod"; // 仮
+            this.elements.namespaceDisplay.textContent = this.namespace;
 
-            // 3. 変換フェーズ (各専門コンバーター担当)
-            this.addLog("Converting assets (Textures, Sounds, Models)...");
-            // ここで Sound.js, テクスチャ.js, Entity.js などをループ実行
-            // 進捗を 40% -> 80% まで徐々に上げる
-            for(let i = 40; i <= 80; i += 10) {
-                await new Promise(r => setTimeout(r, 500)); // ダミー待ち時間
-                this.updateProgress(i);
-            }
+            // STEP 3: 翻訳 (codejava.js / codeBedrock.js)
+            this.addLog("Translating Java logic to Bedrock Components...");
+            await this.simulateWork(80);
 
-            // 4. マニフェスト生成 (Manifest.js 担当予定)
-            this.addLog("Generating manifest.json and UUIDs...");
-            this.updateProgress(90);
+            // STEP 4: パッケージング (file.js / Manifest.js)
+            this.addLog("Generating .mcpack bundle...");
+            await this.simulateWork(100);
 
-            // 5. パッケージング & ダウンロード (file.js 担当予定)
-            this.addLog("Packaging into .mcpack...");
-            // await FileHandler.download(convertedData);
-            
-            this.updateProgress(100);
-            this.addLog("Conversion completed successfully!", "success");
-            this.addLog("Download should start automatically.", "info");
+            this.addLog("CONVERSION COMPLETE. Archive ready for deployment.", "success");
 
-        } catch (error) {
-            // Error.js / subError.js との連携
-            this.addLog(`Critical Error: ${error.message}`, "error");
-            this.addLog("Conversion aborted.", "error");
+        } catch (err) {
+            this.addLog(`FATAL ERROR: ${err.message}`, "error");
         } finally {
             this.isConverting = false;
-            this.convertBtn.disabled = false;
+            this.elements.convertBtn.disabled = false;
         }
+    }
+
+    // 実装までのテスト用遅延関数
+    simulateWork(percent) {
+        return new Promise(resolve => {
+            setTimeout(() => {
+                this.updateProgress(percent);
+                resolve();
+            }, 1000);
+        });
     }
 }
 
-// アプリケーションの起動
-window.addEventListener('DOMContentLoaded', () => {
-    window.app = new AppController();
+// 起動
+document.addEventListener('DOMContentLoaded', () => {
+    window.kernel = new AppController();
 });
